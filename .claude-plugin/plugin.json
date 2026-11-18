@@ -1,0 +1,13 @@
+{
+  "name": "hcr",
+  "version": "4.1",
+  "description": "HCR: converts one historical cooking recipe into a modern technical dossier (deterministic engine + output linter).",
+  "skills": [
+    "./skills/hcr"
+  ],
+  "author": {
+    "name": "Mauro Trevisan",
+    "url": "https://github.com/mtrevisan/skills"
+  },
+  "repository": "https://github.com/mtrevisan/skills"
+}
