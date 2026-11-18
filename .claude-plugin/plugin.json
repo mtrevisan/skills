@@ -1,9 +1,9 @@
 {
-  "name": "hcr",
+  "name": "hrc",
   "version": "4.1",
-  "description": "HCR: converts one historical cooking recipe into a modern technical dossier (deterministic engine + output linter).",
+  "description": "HRC: transforms historical recipes into modern, reproducible technical cooking dossiers while preserving the original sources (deterministic engine + output linter).",
   "skills": [
-    "./skills/hcr"
+    "./skills/hrc"
   ],
   "author": {
     "name": "Mauro Trevisan",

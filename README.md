@@ -1,115 +1,502 @@
-# HCR — Historical Cooking Recipe (Claude, Gemini, AI Studio, DeepSeek)
+# Historical Recipe Converter (HRC)
 
-Turns **one** historical recipe (any language, any era) into **one** modern technical dossier: historical and modern ingredient list with computed masses, rheological check, HACCP, procedure in STE100.
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.x](https://img.shields.io/badge/Python-3.x-blue.svg)](https://www.python.org/)
+[![Claude Code Compatible](https://img.shields.io/badge/Claude%20Code-Compatible-purple.svg)](https://www.anthropic.com/claude-code)
+[![Gemini Compatible](https://img.shields.io/badge/Gemini-Compatible-orange.svg)](https://gemini.google.com/)
+[![Google AI Studio Compatible](https://img.shields.io/badge/Google%20AI%20Studio-Compatible-red.svg)](https://aistudio.google.com/)
+[![DeepSeek Compatible](https://img.shields.io/badge/DeepSeek-Compatible-black.svg)](https://www.deepseek.com/)
+[![stdlib only](https://img.shields.io/badge/Dependencies-stdlib%20only-success.svg)](https://docs.python.org/3/library/)
 
-Models get the arithmetic of ancient measures wrong and invent values they do not know. This skill moves the numbers out of the model: a deterministic Python engine computes them (same recipe, same result) and a check (`--check`) verifies the output before it is delivered.
+A deterministic framework for reconstructing historical recipes into auditable modern technical dossiers.
 
-## What it is for
+HRC combines historical metrology, philological ingredient identification, quantitative reconstruction, rheological validation, and output auditing to transform historical recipes into reproducible modern cooking specifications.
 
-- Converting native measures (libbra, oncia, pinch, tankard, "1 1/2 glass"...) into grams, using only the tables you provide or cited web sources. What is not known stays `DATA UNKNOWN`, never invented.
-- Identifying every ingredient with a protocol (old spellings are deceptive: variants, dialects, false friends) instead of trusting the similar-looking modern word.
-- Producing modern masses from physics (density, projection of ratios), not from history, rounded half-up with decimals per category (solids and fluids 1, spices and salt 2).
-- Checking a dossier written by another model: `--check` verifies row format, decimals, names, duplicate rows, round masses.
+Unlike generic AI prompts, HRC separates numerical reconstruction from language generation. Quantities are computed by a deterministic Python engine and validated before inclusion in the final dossier.
 
-## Installation (30 seconds)
+---
 
-### 1. Get the skill
+## Why HRC Exists
 
-<details>
-<summary><strong>Claude Code</strong> (updates itself)</summary>
+Historical recipes are difficult to interpret because they combine:
+
+- Obsolete terminology.
+- Regional dialects.
+- Historical spellings.
+- Ambiguous ingredient names.
+- Incomplete procedures.
+- Non-standard units of measure.
+- Missing contextual information.
+
+General-purpose AI models frequently:
+
+- Invent values for unknown measures.
+- Confuse historical and modern ingredients.
+- Perform inconsistent conversions.
+- Hide uncertainty behind plausible text.
+- Produce different results across runs.
+
+HRC follows a different principle:
+
+> If evidence is missing, uncertainty must be documented rather than invented.
+
+Every value in the final dossier must be:
+
+- Calculated;
+- Derived from documented evidence;
+- Or explicitly marked as `DATA UNKNOWN`.
+
+---
+
+## Core Capabilities
+
+### Historical Metrology
+
+Reconstructs historical quantities using documented measure systems.
+
+Supported scenarios include:
+
+- Local and regional units.
+- Hierarchical measure chains.
+- Historical sub-units.
+- Container-based measures.
+- Count-based measures.
+- Price-derived measures.
+- Source-specific conversion tables.
+
+When no authoritative evidence exists, the quantity remains `DATA UNKNOWN`.
+
+---
+
+### Philological Ingredient Identification
+
+Ingredient identification is not based on lexical similarity.
+
+HRC evaluates:
+
+1. Internal recipe evidence.
+2. Parallel recipes.
+3. Historical dictionaries.
+4. Dialect dictionaries.
+5. Botanical references.
+6. Culinary-history literature.
+
+Ambiguous terms remain unresolved when the evidence is insufficient.
+
+HRC never silently chooses the most plausible interpretation.
+
+---
+
+### Deterministic Quantity Reconstruction
+
+Historical quantities are reconstructed through a deterministic engine.
+
+The engine supports:
+
+- Unit conversion.
+- Ratio propagation.
+- Density-based projection.
+- Scale normalization.
+- Missing quantity reconstruction.
+- Consistency validation.
+
+Identical inputs always produce identical numerical outputs.
+
+---
+
+### Technological and Rheological Validation
+
+Ingredient quantities are validated against technological archetypes rather than copied blindly from historical sources.
+
+Supported archetypes include:
+
+- DOUGH_DENSE
+- DOUGH_OPEN
+- GEL_SOFT
+- GEL_FIRM
+- LIQUID_THICK
+- LIQUID_THIN
+- PROTEIN_COAGULUM
+
+Validation may include:
+
+- Hydration-ratio analysis.
+- Lipid constraints.
+- Aromatic-load constraints.
+- Density checks.
+- Water-activity estimation.
+- Thermal-window consistency.
+
+---
+
+### Variant-Aware Reconstruction
+
+Historical recipes frequently contain alternative ingredient sets or optional formulations.
+
+HRC reconstructs each variant independently.
+
+Every variant receives:
+
+- Its own ingredient table.
+- Its own mass balance.
+- Its own rheological validation.
+- Its own confidence assessment.
+
+Variants are never merged during optimization.
+
+---
+
+### Concordance Construction
+
+When comparable recipes are available, HRC builds a concordance from source-provided evidence.
+
+The concordance is used to:
+
+- Clarify terminology.
+- Validate ingredient identification.
+- Support interpretation decisions.
+- Document alternative readings.
+
+Only material explicitly supplied by the user may enter the concordance.
+
+---
+
+## Reproducibility and Auditing
+
+HRC is designed to produce auditable outputs.
+
+The deterministic engine generates a verification signature (`sig`) tied to the reconstructed state.
+
+This enables:
+
+- Repeatability checks.
+- Change detection.
+- Post-processing detection.
+- Independent validation.
+
+The same input, evidence set, and rules produce the same reconstructed state.
+
+---
+
+## Output Validation
+
+HRC includes a validation engine capable of auditing dossiers generated by any AI model.
+
+Validation covers:
+
+- Structural conformity.
+- Missing mandatory sections.
+- Decimal precision rules.
+- Ingredient consistency.
+- Duplicate entries.
+- Mass-balance anomalies.
+- Variant consistency.
+- Verification signature integrity.
+
+A dossier can therefore be reviewed independently from the model that produced it.
+
+---
+
+## Design Principles
+
+HRC follows five principles:
+
+1. Evidence before assumption.
+2. Determinism before plausibility.
+3. Explicit uncertainty.
+4. Source traceability.
+5. Reproducible outputs.
+
+A historically incorrect answer presented with confidence is worse than an incomplete answer with documented uncertainty.
+
+---
+
+## Example
+
+### Historical Input
+
+> Take one libra of flour, half a boccale of milk, three once of sugar and a pinch of cinnamon.
+
+### Output Excerpt
+
+| Historical Ingredient | Modern Identification | Mass (g) | Confidence |
+|------------------------|----------------------|----------|------------|
+| 1 libra flour | Wheat flour | 339.0 | HIGH |
+| 1/2 boccale milk | Whole milk | 540.0 | MEDIUM |
+| 3 once sugar | White sugar | 84.8 | HIGH |
+| pinch cinnamon | Cinnamon | DATA UNKNOWN | LOW |
+
+### Generated Dossier
+
+The final dossier may include:
+
+- Historical ingredient table.
+- Modern ingredient table.
+- Identification rationale.
+- Metrological evidence.
+- Reconstruction assumptions.
+- Confidence assessment.
+- Rheological analysis.
+- HACCP observations.
+- STE100 preparation procedure.
+- Bibliographic references.
+- Validation signature.
+
+---
+
+## Requirements
+
+- Python 3.
+- Python standard library only.
+- No third-party dependencies.
+
+The deterministic engine runs entirely on the Python standard library.
+
+---
+
+## Installation
+
+### Claude Code Marketplace
 
 ```bash
 claude plugin marketplace add mtrevisan/skills
-claude plugin install hcr@skills
+claude plugin install hrc@skills
 ```
 
-From Claude Code 2.1.275 one line is enough: `/plugin install hcr --marketplace mtrevisan/skills`.
+For Claude Code 2.1.275 or newer:
 
-</details>
+```bash
+/plugin install hrc --marketplace mtrevisan/skills
+```
 
-<details>
-<summary><strong>Files only</strong> (manual update)</summary>
-
-Clone the repository and copy the skill folder among Claude's skills:
+### Manual Installation
 
 ```bash
 git clone --depth 1 https://github.com/mtrevisan/skills.git
-mkdir -p ~/.claude/skills
-cp -r skills/skills/hcr ~/.claude/skills/hcr
 ```
 
-To have it in a single project only, copy it to `<project>/.claude/skills/hcr`. To update, repeat `git pull` and the copy.
+```bash
+mkdir -p ~/.claude/skills
+```
 
-</details>
+```bash
+cp -r skills/skills/hrc ~/.claude/skills/hrc
+```
 
-### 2. Requirements
+For project-local installation:
 
-Python 3 (standard library only) to run the engine. Without code execution the skill still works with manual calculation (`FALLBACK.md`): confidence is capped at MEDIUM and the dossier states so.
+```text
+<project>/.claude/skills/hrc
+```
 
-### 3. Use it
+To update:
 
-Type `/hcr` or ask to analyse a recipe; the skill triggers by itself when faced with a historical recipe. The message must contain:
+```bash
+git pull
+```
 
-- the recipe to analyse (e.g. "analyse the recipe of 1502");
-- similar recipes, if any: they become the concordance (quotations copied from the input, never from memory);
-- the bibliography with the measure tables. If missing, the skill looks them up online and cites URL and page; units without a table (price soldi, "mesura", counts) stay `DATA UNKNOWN`.
+and copy the skill directory again.
 
-For repeatable results set the temperature to 0–0.2 where possible.
+---
 
-## Other platforms (Gemini, AI Studio, DeepSeek)
+## Usage
 
-Only Claude reads `SKILL.md`. For the others, `platforms/` holds the same rules and the same engine, generated from the skill by `build_platforms.py` (edit the skill, never the generated files, then run `py build_platforms.py`). Download the files you need from GitHub and paste or upload them as below.
+Invoke:
+
+```text
+/hrc
+```
+
+or ask the model to analyse a historical recipe.
+
+Recommended input:
+
+1. Historical recipe text.
+2. Comparable recipes (optional).
+3. Bibliographic references.
+4. Historical measure tables.
+
+If conversion tables are not provided, HRC may search for documented sources and cite them.
+
+Unknown values remain `DATA UNKNOWN`.
+
+For maximum reproducibility, use a model temperature between `0.0` and `0.2`.
+
+---
+
+## Confidence Levels
+
+### HIGH
+
+Directly supported by evidence or documented conversion tables.
+
+### MEDIUM
+
+Supported by indirect evidence with limited ambiguity.
+
+### LOW
+
+Supported by weak, incomplete, or competing evidence.
+
+Confidence reflects evidential strength, not historical certainty.
+
+---
+
+## Fallback Mode
+
+When Python execution is unavailable, HRC can operate in manual mode.
+
+In fallback mode:
+
+- Deterministic computation is disabled.
+- Quantitative reconstruction follows documented manual procedures.
+- Confidence is capped at MEDIUM.
+- The dossier explicitly reports the fallback status.
+
+---
+
+## Supported Platforms
+
+### Claude Code
+
+Native SKILL.md support.
 
 ### Gemini
 
-- **Gem (no code execution).** Create a Gem. *Instructions*: paste `platforms/gemini/INSTRUCTIONS.md`. *Knowledge*: upload `platforms/gemini/KNOWLEDGE.md` and `platforms/gemini/FALLBACK.md`. Numbers follow the manual calculation: `python=false`, confidence capped at MEDIUM, and the dossier says so.
-- **Gemini CLI (code execution, exact numbers).** It reads the skill as it is:
+#### Gemini Gem
+
+Upload:
+
+- `platforms/gemini/INSTRUCTIONS.md`
+- `platforms/gemini/KNOWLEDGE.md`
+- `platforms/gemini/FALLBACK.md`
+
+#### Gemini CLI
 
 ```bash
 gemini skills install https://github.com/mtrevisan/skills.git --path skills
 ```
 
-### Google AI Studio (Code execution on)
+### Google AI Studio
 
-1. Turn on **Code execution**; temperature 0–0.2.
-2. *System instructions*: paste `platforms/aistudio/SYSTEM_INSTRUCTIONS.md`.
-3. First message: paste `platforms/aistudio/ENGINE_MESSAGE.md` (the engine source). The model must not answer it.
-4. Second message: the input.
+Enable:
 
-The code sandbox cannot read files and keeps no state, so every code call starts with the engine source copied from the first message. This costs tokens and depends on an exact copy; if the copy is wrong, the dossier carries `python:false` and follows the manual calculation.
+- Code Execution.
+- Temperature between 0.0 and 0.2.
+
+Then:
+
+1. Paste `SYSTEM_INSTRUCTIONS.md`.
+2. Paste `ENGINE_MESSAGE.md`.
+3. Submit the recipe.
 
 ### DeepSeek
 
-- **Web chat (no code).** First message: paste `platforms/deepseek/BUNDLE_NOEXEC.md`. Second message: the input. Manual calculation, as for the Gem.
-- **API or agent harness that runs code.** System prompt: `platforms/deepseek/BUNDLE_EXEC.md`; put `platforms/deepseek/hcr_engine.py` in the working directory.
+#### Web Interface
 
-Not verified on the live Gemini app, AI Studio or DeepSeek: limits and sandbox behaviour are taken from the HCR 4.1 notes.
+Use:
 
-## What is inside
-
-```
-.claude-plugin/plugin.json
-skills/hcr/SKILL.md                  rules and pipeline (single source)
-skills/hcr/KNOWLEDGE.md              metrology, limits, linter, engine schema
-skills/hcr/FALLBACK.md               manual calculation, only without code
-skills/hcr/scripts/hcr_engine.py     engine + check (stdlib)
-skills/hcr/scripts/hcr_selftest.py   tests (development only)
-build_platforms.py                   generates platforms/ from the skill
-platforms/gemini/                    Gem instructions + knowledge
-platforms/aistudio/                  system instructions + engine message
-platforms/deepseek/                  bundles + engine
+```text
+platforms/deepseek/BUNDLE_NOEXEC.md
 ```
 
-## Checking a dossier by hand
+#### API or Agent Harness
+
+Use:
+
+```text
+platforms/deepseek/BUNDLE_EXEC.md
+```
+
+and place:
+
+```text
+platforms/deepseek/hrc_engine.py
+```
+
+in the working directory.
+
+---
+
+## Repository Structure
+
+```text
+.claude-plugin/
+└── plugin.json
+
+skills/
+└── hrc/
+    ├── SKILL.md
+    ├── KNOWLEDGE.md
+    ├── FALLBACK.md
+    └── scripts/
+        ├── hrc_engine.py
+        └── hrc_selftest.py
+
+platforms/
+├── gemini/
+├── aistudio/
+└── deepseek/
+
+build_platforms.py
+```
+
+---
+
+## Validate a Dossier
 
 ```bash
-python skills/hcr/scripts/hcr_engine.py --check dossier.md
+python skills/hrc/scripts/hrc_engine.py --check dossier.md
 ```
 
-Exits with code 1 if there is a FAIL. It works for any model: paste the answer into a file and run it. AI Studio can also run `check(dossier_text)` itself.
+Exit status:
 
-## Tests
+```text
+0 = PASS
+1 = FAIL
+```
+
+The validator is model-independent and can verify dossiers produced by any AI system.
+
+---
+
+## Run Tests
 
 ```bash
-python skills/hcr/scripts/hcr_selftest.py   # -> SELFTEST OK
+python skills/hrc/scripts/hrc_selftest.py
 ```
+
+Expected result:
+
+```text
+SELFTEST OK
+```
+
+---
+
+## Non-Goals
+
+HRC does not:
+
+- Guess unknown ingredients.
+- Invent missing measures.
+- Invent densities.
+- Invent preparation steps.
+- Hide uncertainty.
+- Replace historical terminology without documentation.
+
+When evidence is absent, the correct result is:
+
+```text
+DATA UNKNOWN
+```
+
+---
+
+## License
+
+MIT License.
+
+Copyright (c) 2026 Mauro Trevisan.
+
+See the `LICENSE` file for details.

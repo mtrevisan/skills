@@ -1,11 +1,10 @@
-"""HCR 4.1 engine: calculation routines and output linter, no tests. One file to load into the AI. Stdlib only.
-Run:  py hcr_engine.py payload.json   |   py hcr_engine.py < payload.json     (add --full for raw floats per ingredient)
-      py hcr_engine.py --check dossier.md   (output linter; a whole dossier or only the two ingredient lists; exit 1 on FAIL)
-Input/Output schema: see '../KNOWLEDGE.md' section E.  Tests: hcr_selftest.py (development only)."""
+"""HRC 4.1 engine: calculation routines and output linter, no tests. One file to load into the AI. Stdlib only.
+Run:  py hrc_engine.py payload.json   |   py hrc_engine.py < payload.json     (add --full for raw floats per ingredient)
+      py hrc_engine.py --check dossier.md   (output linter; a whole dossier or only the two ingredient lists; exit 1 on FAIL)
+Input/Output schema: see '../KNOWLEDGE.md' section E.  Tests: hrc_selftest.py (development only)."""
 import hashlib, json, math, re, sys
 from decimal import Decimal, ROUND_HALF_UP
 from fractions import Fraction
-
 KEVAP = 0.0142
 DENS = {"starch": 1.55, "protein": 1.35, "lipid": 0.92, "fluid": 1.025, "osmotic": 1.59, "ionic": 2.16, "other": 1.20}
 POR = {"DOUGH_OPEN": .425, "DOUGH_DENSE": .165, "GEL_SOFT": .02, "GEL_FIRM": .045, "SOLID_DRY": .55,
@@ -15,18 +14,14 @@ AWF = {"SOLID_DRY": (.3, .6), "DOUGH_DENSE": (.85, .92), "DOUGH_OPEN": (.92, .95
        "PROTEIN_COAGULUM": (.95, .985), "MATRIC_UNSPECIFIED": (.75, .95)}
 BND = {"GEL_SOFT": (1.7, 2.7), "GEL_FIRM": (.8, 1.7), "DOUGH_DENSE": (.45, .62), "DOUGH_OPEN": (.62, .85),
        "LIQUID_THICK": (4., 10.), "LIQUID_THIN": (10., math.inf), "SOLID_DRY": (0., .3), "PROTEIN_COAGULUM": (1.2, 3.5)}
-LIPMOD = {"EMULSION_O_W": 1.1, "FAT_SHORTENING": .9}  # porosity multipliers (viscous lipid archetypes)
+LIPMOD = {"EMULSION_O_W": 1.1, "FAT_SHORTENING": .9}
 ALLOWED_DEN = (1, 2, 3, 4, 6, 8, 12)
-SOTT = ("salt", "drug", "hydrolat")  # weighed SOTTILE cats printed with 2 decimals in the modern list (spice has its own branch)
+SOTT = ("salt", "drug", "hydrolat")
 FLOOR = {"SOTTILE": .01, "GROSSO": .1, "DRY_VOLUME": .1, "LIQUID_VOLUME": .1}
 KEYS = ("integer count", "saturation", "boundary", "constraint", "clamp")
-# No word lists: names may be in any language or spelling, ancient or modern. The engine never reads a name to decide anything.
-# Classification comes only from fields the caller sets after identifying each ingredient (see `ident`).
-IDENT = ("KNOWN", "RESEARCHED", "UNKNOWN")  # KNOWN/RESEARCHED need a source in `ident.src`; UNKNOWN forces cat "other"
-ALWAYS_STABLE = ("flour", "spice", "sugar", "salt", "drug", "hydrolat")  # perishability not asked
+IDENT = ("KNOWN", "RESEARCHED", "UNKNOWN")
+ALWAYS_STABLE = ("flour", "spice", "sugar", "salt", "drug", "hydrolat")
 ALWAYS_PERISHABLE = ("meat", "cheese")
-
-# zone: k, inflection, Lp, Lw, min_g, min_r, max_g, max_r, lc_g, lc_r   (0=IT 1=IQ 2=FI 3=PT 4=CH 5=SCT 6=BAV 7=EN 8=ES 9=AND 10=FR 11=DE 12=AT 13=BE 14=NL 15=US)
 EGG = [(.080, 1962, 1348, 120, 39.5, 1.85, 54.5, 2.38, -2.8, -.12), (.055, 1978, 1258, 150, 33.5, 1.80, 46.5, 2.25, -3.2, -.15),
        (.075, 1965, 1350, 140, 37.5, 1.90, 52.5, 2.35, -2.5, -.10), (.070, 1968, 1385, 130, 38.0, 1.85, 52.0, 2.34, -2.2, -.10),
        (.085, 1956, 1349, 110, 39.0, 1.88, 53.5, 2.36, -2.5, -.10), (.075, 1958, 1350, 140, 38.5, 1.90, 53.5, 2.36, -2.8, -.12),
@@ -35,8 +30,6 @@ EGG = [(.080, 1962, 1348, 120, 39.5, 1.85, 54.5, 2.38, -2.8, -.12), (.055, 1978,
        (.085, 1958, 1348, 120, 40.0, 1.88, 55.0, 2.38, -2.8, -.12), (.085, 1956, 1349, 120, 39.8, 1.90, 55.0, 2.39, -2.7, -.12),
        (.080, 1960, 1349, 120, 39.5, 1.88, 54.5, 2.38, -2.6, -.11), (.090, 1954, 1349, 110, 40.2, 1.92, 55.5, 2.40, -2.8, -.12),
        (.095, 1950, 1349, 110, 40.5, 1.93, 56.5, 2.42, -2.5, -.11), (.095, 1945, 0, 0, 41.0, 1.95, 56.0, 2.41, 0., 0.)]
-
-
 def egg_model(year, n):
     k, fx, lp, lw, e0, r0, e1, r1, le, lr = EGG[n] if n is not None and 0 <= n < 16 else (.075, 1960, 1350, 120, 39.5, 1.88, 54.0, 2.36, -2.5, -.10)
     sig = 1 / (1 + math.exp(max(-60., min(60., -k * (year - fx)))))
@@ -48,21 +41,15 @@ def egg_model(year, n):
             "albumen_w_pct": .855 + .026 * sig - .008 * lor, "albumen_p_pct": .115 - .012 * sig + .004 * lor,
             "yolk_w_pct": .49 + .025 * sig - .01 * lor, "yolk_p_pct": .162 - .006 * sig + .003 * lor,
             "yolk_f_pct": .325 - .02 * sig + .008 * lor}
-
-
-def tr(x, d):  # round half up (never truncate) to d decimals
+def tr(x, d):
     return str(Decimal(repr(float(x))).quantize(Decimal(1).scaleb(-d), rounding=ROUND_HALF_UP))
-
-
 def track(cat, vol):
     if cat == "flour": return "DRY_VOLUME" if vol else "GROSSO"
-    if cat == "hydrolat" and vol: return "LIQUID_VOLUME"  # volumetric measure never takes a weight scalar
+    if cat == "hydrolat" and vol: return "LIQUID_VOLUME"
     if cat in ("spice", "sugar", "salt", "drug", "hydrolat"): return "SOTTILE"
     if cat == "liquid": return "LIQUID_VOLUME" if vol else "GROSSO"
     return "GROSSO"
-
-
-def frac(s):  # '1 1/2' -> Fraction; None if decimal/invalid
+def frac(s):
     try:
         if s is None or isinstance(s, bool): return None
         if isinstance(s, Fraction): return s
@@ -75,21 +62,15 @@ def frac(s):  # '1 1/2' -> Fraction; None if decimal/invalid
         return sum((Fraction(p) for p in ss.split()), Fraction(0))
     except (ValueError, ZeroDivisionError):
         return None
-
-
 def fstr(f):
     w, r = divmod(f.numerator, f.denominator)
     return (f"{w} " if w else "") + (f"{r}/{f.denominator}" if r else "") if r or not w else str(w)
-
-
-def retro(mass, unit_g, dens=ALLOWED_DEN):  # nearest integer / base-12 fraction of a native unit (eggs: integer or half)
+def retro(mass, unit_g, dens=ALLOWED_DEN):
     best = None
     for d in dens:
         f = Fraction(round(mass / unit_g * d), d)
         if f > 0 and (best is None or abs(float(f) - mass / unit_g) < abs(float(best) - mass / unit_g) - 1e-12): best = f
     return best
-
-
 def pick_unit(h, mm, isfl, fl):
     """Quantity missing: coarsest table unit with Q >= 1 and error <= 1.5 % (else the finest that fits).
     Fluids take a volumetric unit, solids a weight unit (flour may be volumetric). Returns ((q, unit row, g per unit), None) or (None, reason)."""
@@ -105,8 +86,6 @@ def pick_unit(h, mm, isfl, fl):
     if not ok: return None, why
     b = max(ok, key=lambda c: c[0])
     return b[1:], None
-
-
 def _grp(it):
     f, p = it.get("function", ""), it.get("phase", "")
     if "starch" in f or "gluten" in f: return "starch"
@@ -116,8 +95,6 @@ def _grp(it):
     if "protein" in f: return "protein"
     if p == "fluid": return "fluid"
     return "other"
-
-
 def density(items, tgt):
     m = sum(i["m"] for i in items)
     v = sum(i["m"] / DENS[_grp(i)] for i in items if i["m"] > 0)
@@ -125,14 +102,12 @@ def density(items, tgt):
     cc = tgt.get("critical_chemical_constraints", {})
     por = POR.get(cc.get("hydration_archetype"), .1) * LIPMOD.get(cc.get("lipid_archetype"), 1.)
     por = min(.85, por)
-    return (m / v) * (1 - por), (m / v) * .01  # err = +-1 pp porosity sensitivity
-
-
+    return (m / v) * (1 - por), (m / v) * .01
 def calc_aw(items, arch):
     fl = sum(i["m"] for i in items if i.get("phase") == "fluid")
     sol = 0.
     for i in items:
-        f = i.get("function")  # never the name: molar mass comes from the optional field `mw` (honey, fructose, glucose: 180)
+        f = i.get("function")
         if f == "osmotic_solute": sol += i["m"] / float(i.get("mw", 342.3))
         elif f == "ionic_solute": sol += i["m"] / 58.44 * 2
     if fl <= 0: return 1., 1., False
@@ -141,8 +116,6 @@ def calc_aw(items, arch):
     lo, hi = AWF.get(arch, (.5, .999))
     c = max(lo, min(hi, raw))
     return c, raw, c != raw
-
-
 def scale_floors(items, M):
     """items carry weight w; returns masses summing to M with floors; flags clamped."""
     fixed = {}
@@ -162,23 +135,19 @@ def scale_floors(items, M):
         for i in new: fixed[id(i)] = FLOOR[i["track"]]; i["m"] = fixed[id(i)]; i["clamp"] = "floor clamp"
     for i in items: i.setdefault("m", 0.)
     return sum(fixed.values()) <= M + 1e-9
-
-
 def inset(lo, hi):
     return (lo * 1.1, hi) if math.isinf(hi) else (lo + .1 * (hi - lo), hi - .1 * (hi - lo))
-
-
 def run(p, full=False):
     err, notes, pen = [], [], []
     ev = math.exp(-KEVAP * p.get("evap_min", 5.0))
     egg = egg_model(p["year"], p.get("zone", 0))
     tg = {t["sub_matrix_name"]: t for t in p.get("inferred_targets", [])}
     items, surf, bound = [], [], False
-    vt = lambda x: f" (variant: {x['variant']})" if x.get("variant") else ""  # variant label, printed by the engine only
+    vt = lambda x: f" (variant: {x['variant']})" if x.get("variant") else ""
     for n_, r in enumerate(p["ingredients"]):
         r = dict(r); r["_i"] = n_; r["track"] = track(r.get("cat"), r.get("vol"))
         if r.get("type") == "pure_surface_density": surf.append(r); continue
-        if r.get("unknown"):  # every ingredient gets a modern mass from physics (seed); only the historical line may be DATA UNKNOWN
+        if r.get("unknown"):
             return {"errors": [f"LINT_ERROR: DATA UNKNOWN modern row refused - {r['name']}: weigh it (unidentified: ident UNKNOWN + cat other; blend without composition: one spice row, hist blend:true)"]}
         if not r.get("egg"):
             idt = r.get("ident") or {}
@@ -207,13 +176,12 @@ def run(p, full=False):
     for h in p.get("hist", []):
         pts = h.get("parts") or []
         comp = {i["name"]: i for i in items if i.get("hist_ref") == h["name"] and i.get("variant") == h.get("variant")}
-        if pts and sorted(comp) == sorted(x[1] for x in pts) and sum(x[0] for x in pts) > 0:  # components matched by name, never by order
+        if pts and sorted(comp) == sorted(x[1] for x in pts) and sum(x[0] for x in pts) > 0:
             tot, ps = sum(i["w"] for i in comp.values()), sum(x[0] for x in pts)
             for x in pts: comp[x[1]]["w"] = tot * x[0] / ps
     mats = list(dict.fromkeys(i["sub_matrix"] for i in items))
     for m in mats:
         if m not in tg: err.append(f"LINT_ERROR: L9 sub-matrix without inferred target - {m}")
-    # 1. ratio projection per sub-matrix
     for mname in mats:
         its = [i for i in items if i["sub_matrix"] == mname]
         cc = tg.get(mname, {}).get("critical_chemical_constraints", {})
@@ -240,7 +208,6 @@ def run(p, full=False):
             if f != 1.:
                 for i in L: i["w"] *= f
                 bound = True; notes.append(f"[{mname}] lipid -> {lip} bound")
-    # 2. geometry / matrix masses
     g = p.get("geometry"); M, geo = dict(p.get("matrix_mass_g", {})), None
     dens = {m: density([dict(i, m=i["w"]) for i in items if i["sub_matrix"] == m], tg.get(m, {})) for m in mats}
     if g:
@@ -258,14 +225,12 @@ def run(p, full=False):
         if fm in dens: M[fm] = math.pi / 4 * dens[fm][0] * (D - 2 * t) ** 2 * h
         geo = {"crust_thickness_cm": t, "filling_height_cm": h, "D": D, "merlon": mer, "crust_coef": cf, "filling_coef": ff,
                "dough_g": M.get(cm), "filling_g": M.get(fm), "crust_matrix": cm, "filling_matrix": fm}
-    # 3. scale to matrix mass with floors
     for m in mats:
         its = [i for i in items if i["sub_matrix"] == m]
         if m not in M and m in p.get("matrix_volume_ml", {}): M[m] = dens[m][0] * p["matrix_volume_ml"][m]
         tot = M.setdefault(m, sum(i["w"] for i in its))
         if not scale_floors(its, tot): err.append(f"LINT_ERROR: floors exceed mass [{m}]")
         if any(i.get("clamp") for i in its): bound = True
-    # 4. aromatic cap L6
     tot_all = sum(i["m"] for i in items)
     ar = [i for i in items if i.get("function") == "volatile_aromatic" and i.get("cat") == "spice"]
     L6 = "OK"
@@ -297,7 +262,6 @@ def run(p, full=False):
             bound = True
         L6 = "OK" if sum(i["m"] for i in ar) <= cap + 1e-9 else "FAIL"
         if L6 == "FAIL": pen.append("aromatic cap unreachable (floors)")
-    # 5. validation
     checks, rh = {}, []
     for m in mats:
         its = [i for i in items if i["sub_matrix"] == m]; cc = tg.get(m, {}).get("critical_chemical_constraints", {})
@@ -318,14 +282,12 @@ def run(p, full=False):
     for m in mats:
         s = sum(i["m"] for i in items if i["sub_matrix"] == m)
         if not math.isclose(s, M[m], rel_tol=1e-3): err.append(f"LINT_ERROR: Mass Mismatch ({m})")
-    # V1 integer termination
     for i in items:
         x = i["m"]
         if abs(x - round(x)) < 1e-4 or abs(x % 1 - .5) < 1e-4:
             j = i.get("just", "") or i.get("clamp", "")
             if i.get("clamp"): j = "clamp: " + i["clamp"] + " constraint"
             if len(j) < 20 or not any(k in j.lower() for k in KEYS): err.append(f"LINT_ERROR: Unjustified termination {i['name']}")
-    # V2/V3 anti-mirroring (literal copy = error; within 1% = Historical Alignment Achieved). Key of a historical row = (name, variant).
     hl_rows = p.get("hist", [])
     hmap = {(h["name"], h.get("variant")): h for h in hl_rows}
     if len(hmap) != len(hl_rows): err.append("LINT_ERROR: Duplicate historical line (same name and variant)")
@@ -343,11 +305,10 @@ def run(p, full=False):
             elif abs(m - hg[ref]) < .1 and abs(m - hg[ref]) / hg[ref] < .01: notes.append(f"Historical Alignment Achieved: {ref[0]}")
     ht = sum(hg[r] for r in mod_by_ref if r in hg)
     if ht > 0 and abs(sum(mod_by_ref[r] for r in mod_by_ref if r in hg) - ht) < .01: err.append("LINT_ERROR: Total mirroring")
-    # L8 / L7 / hist lines
     hl, L8, L7 = [], "OK", "OK"
     for n_ in sorted({i.get("egg_of") or i["name"] for i in items if (i.get("hist_ref"), i.get("variant")) not in hmap}):
         err.append(f"LINT_ERROR: Ingredient without historical line - {n_}")
-    for i in items:  # the modern name is the historical name (source language); only eggs and blend components differ
+    for i in items:
         h = hmap.get((i.get("hist_ref"), i.get("variant")))
         if h and not i.get("egg_of") and not h.get("parts") and i["name"] != h["name"]:
             err.append(f"LINT_ERROR: Modern name differs from historical name - {i['name']} / {h['name']}")
@@ -356,7 +317,7 @@ def run(p, full=False):
         refs = [i for i in items if (i.get("hist_ref") or i.get("egg_of"), i.get("variant")) == key]
         if not refs: err.append(f"LINT_ERROR: Historical line without modern row - {h['name']}{v}")
         isfl = any(i.get("phase") == "fluid" for i in refs)
-        fl = h.get("fluid_rho") or next((i["rho"] for i in refs if i.get("rho")), None)  # volume -> mass: hist density, else the modern row's
+        fl = h.get("fluid_rho") or next((i["rho"] for i in refs if i.get("rho")), None)
         q, u, ug, uml = frac(h.get("qty_native")), h.get("unit", ""), h.get("unit_g"), h.get("unit_ml")
         if egk: ug, uml = {"albumen": egg["albumen_g"], "yolk": egg["yolk_g"]}.get(egk, egg["total_edible_g"]), None
         elif not h.get("proxy") and any((x.get("unit_g") or x.get("unit_ml")) and not str(x.get("unit_src", "")).strip() for x in [h] + list(h.get("units") or [])):
@@ -383,7 +344,7 @@ def run(p, full=False):
             else: hl.append(f"[Inferred: DATA UNKNOWN] {h['name']}{v}"); pen.append("DATA UNKNOWN " + h["name"]); continue
         gm = float(q) * ug if q is not None and ug else None
         vm = float(q) * uml if q is not None and uml else (gm / fl if gm is not None and fl and isfl else None)
-        d = 2 if h.get("cat") in ("spice", "salt", "drug", "hydrolat") else 1  # same decimals as the modern list
+        d = 2 if h.get("cat") in ("spice", "salt", "drug", "hydrolat") else 1
         core = f"{tr(gm, d)} g" if gm is not None else ""
         if vm is not None: core += (" = " if core else "") + f"{tr(vm, 1)} ml"
         if egk is True and gm is not None:
@@ -393,14 +354,13 @@ def run(p, full=False):
         if not core and q is not None: core = " [DATA UNKNOWN: no table for unit]"; pen.append("no mass data " + h["name"])
         else: core = core and f" ({core})"
         s0 = f"{fstr(q) if q is not None else ''} {u}{core}".strip()
-        tail = ("" if h["name"] == u else " " + h["name"]) + tax + v  # a count noun (unit = name) is not written twice
-        if h.get("proxy"): tail += f" [PROXY: {h['proxy']}]"; pen.append("proxy-derived mass " + h["name"])  # e.g. grams from price/other-source unit
+        tail = ("" if h["name"] == u else " " + h["name"]) + tax + v
+        if h.get("proxy"): tail += f" [PROXY: {h['proxy']}]"; pen.append("proxy-derived mass " + h["name"])
         hl.append((f"[Inferred: {s0}]" if inf else s0) + tail)
         for part in h.get("parts", []):
             if not part or len(part) < 2: continue
             tx = f" (*{part[2]}*)" if len(part) > 2 and part[2] else ""
             hl.append(f"  - {part[0]} parts {part[1]}{tx}")
-    # lines (input order; DATA UNKNOWN rows keep their place)
     ml = []
     for i in items:
         v = vt(i)
@@ -410,11 +370,10 @@ def run(p, full=False):
         elif i.get("phase") == "fluid" and i.get("rho"):
             eo = f" [{tr(i['eo_pct'], 4)}% EO]" if i.get("eo_pct") is not None else ""
             ml.append((i["_i"], f"{tr(i['m'], 1)} g = {tr(i['m'] / i['rho'], 1)} ml {i['name']}{eo}{tax}{v}"))
-        elif i.get("cat") in SOTT: ml.append((i["_i"], f"{tr(i['m'], 2)} g {i['name']}{tax}{v}"))  # salt, drug: 2 decimals (sugar is a solid: 1)
-        else: ml.append((i["_i"], f"{tr(i['m'], 1)} g {i['name']}{tax}{v}"))  # solids and fluids: 1 decimal
+        elif i.get("cat") in SOTT: ml.append((i["_i"], f"{tr(i['m'], 2)} g {i['name']}{tax}{v}"))
+        else: ml.append((i["_i"], f"{tr(i['m'], 1)} g {i['name']}{tax}{v}"))
     ml = [x[1] for x in sorted(ml, key=lambda x: x[0])]
     for s in surf: ml.append(f"{tr(s['density_g_cm2'], 3)} g/cm² {s['name']}" + (f" (*{s['taxon']}*)" if s.get("taxon") else ""))
-    # aw, thermal, haccp
     aw = {}
     for m in mats:
         arch = tg.get(m, {}).get("critical_chemical_constraints", {}).get("hydration_archetype", "MATRIC_UNSPECIFIED")
@@ -422,13 +381,12 @@ def run(p, full=False):
         aw[m] = {"aw": c, "raw": r, "clamped": cl}
         if cl:
             notes.append(f"aw [{m}] clamped {r:.4f}->{c:.4f}")
-            if r < AWF.get(arch, (.5, .999))[0]: pen.append("aw below archetype floor")  # above = bound water, expected, no penalty
+            if r < AWF.get(arch, (.5, .999))[0]: pen.append("aw below archetype floor")
     mx = max((v["aw"] for v in aw.values()), default=1.)
-
     def perishable(i):
         if i.get("cat") in ALWAYS_PERISHABLE or i.get("perishable") is True: return True
         if i.get("cat") in ALWAYS_STABLE or i.get("perishable") is False: return False
-        notes.append(f"perishable undeclared for {i['name']}: treated as perishable"); return True  # conservative, never silent
+        notes.append(f"perishable undeclared for {i['name']}: treated as perishable"); return True
     per = any([perishable(i) for i in items])
     if mx >= .95 or (per and mx > .85): stor, sh = "Refrigerated +4 °C", 48 if mx >= .95 else 96
     elif mx >= .6: stor, sh = "Ambient", 48
@@ -452,8 +410,7 @@ def run(p, full=False):
                      "m_bal_dev": max((abs(sum(i["m"] for i in items if i["sub_matrix"] == m) - M[m]) / M[m] for m in mats if M[m]), default=0.)}}
     loop = p.get("loop", 1)
     vs = list(dict.fromkeys(i.get("variant") for i in items)) or [None]
-
-    def tline(g):  # one mass balance per variant (a variant is a separate batch); only fluids evaporate
+    def tline(g):
         its = [i for i in items if i.get("variant") == g]; t = sum(i["m"] for i in its)
         f = t - sum(i["m"] for i in its if i.get("phase") == "fluid") * (1 - ev)
         lab = "" if len(vs) <= 1 else " (base)" if g is None else f" (variant: {g})"
@@ -486,13 +443,10 @@ def run(p, full=False):
     if full: out["egg"] = egg
     if full: out["ingredients"] = [{"name": i["name"], "sub_matrix": i["sub_matrix"], "Mod_Mass": i["m"], "track": i["track"], "clamp": i.get("clamp")} for i in items]
     return out
-
-
-# ---- output linter ----
 _Q = r"(?P<q>\d+ \d+/\d+|\d+/\d+|\d+)"
 _N = r"\d+\.\d+"
 _M = rf"(?P<m>{_N} g(?: = {_N} ml)?|{_N} g albumen \+ {_N} g yolk|{_N} g (?:albumen|yolk))"
-H_PLAIN = re.compile(rf"^{_Q} (?P<u>[^()\[\]]+?) \({_M}\)(?P<t>.*)$")  # a unit may be several words ("libbra sottile")
+H_PLAIN = re.compile(rf"^{_Q} (?P<u>[^()\[\]]+?) \({_M}\)(?P<t>.*)$")
 H_INF = re.compile(rf"^\[Inferred: {_Q} (?P<u>[^()\[\]]+?) \({_M}\)\](?P<t>.*)$")
 H_NOTBL = re.compile(rf"^{_Q} (?P<u>[^()\[\]]+?) \[DATA UNKNOWN: no table for unit\](?P<t>.*)$")
 H_UNK = re.compile(r"^\[Inferred: DATA UNKNOWN\](?P<t>.*)$")
@@ -505,17 +459,13 @@ HEADERS = ["## Technical Analysis (TA)", "### Inferred Technological Targets", "
            "### Rheological & Environmental Windows", "## Historical Concordance & Verification", "## Historical List of Ingredients", "## Modern List of Ingredients",
            "## Modern Procedure", "## Operational Mise en Place & Service Logistics", "## Food Safety & Preservation (HACCP Track)", "## Rheological Contingency Protocols",
            "## Modern Palatability & Sensorial Adaptation", "## Substitutions", "## Batch Comparative Analysis"]
-
-
-def _tail(t, proxy=False):  # -> (name, taxon, variant) from the text after the mass
+def _tail(t, proxy=False):
     t = t.strip()
     if proxy: t = T_PROXY.sub("", t)
     v = T_VAR.search(t); t = T_VAR.sub("", t) if v else t
     x = T_TAX.search(t); t = T_TAX.sub("", t) if x else t
     t = T_EO.sub("", t)
     return t.strip(), x.group("x") if x else None, v.group("v") if v else None
-
-
 def _section(lines, title):
     out, on = [], False
     for ln in lines:
@@ -524,8 +474,6 @@ def _section(lines, title):
         if h == title: on = True; continue
         if on and ln.strip(): out.append(ln.rstrip())
     return out, on
-
-
 def check(text):
     """Lint a dossier (or only its two ingredient lists). Returns [(level, message)], level FAIL|WARN."""
     R = []
@@ -548,10 +496,9 @@ def check(text):
             if at < 0: F(f"missing header: {h}")
             elif at < pos: F(f"header out of order: {h}")
             else: pos = at
-        if not py: F("State block missing (the last block must hold the hcr_state JSON)")
+        if not py: F("State block missing (the last block must hold the hrc_state JSON)")
         elif py.group(1) == "true" and not sig: F("State has python:true but no sig")
         if "<details>" in text and text.rstrip().rfind("</details>") < text.rfind("<details>"): F("State block not closed")
-    # historical list
     heads, parts_of, hkeys, taxa = [], {}, set(), {}
     cur, inf_unknown, unk_keys, wunits, vunits = None, 0, [], set(), set()
     hdec = {}
@@ -587,7 +534,7 @@ def check(text):
         k = (name.lower(), v)
         if is_unk: inf_unknown += 1; unk_keys.append(k)
         if gd.get("m") and "albumen" not in gd["m"] and "yolk" not in gd["m"] and gd["u"].lower() != name.lower():
-            (vunits if " ml" in gd["m"] else wunits).add(gd["u"])  # table units in use (count nouns and eggs excluded)
+            (vunits if " ml" in gd["m"] else wunits).add(gd["u"])
         if gd.get("m"):
             hdec[k] = len(gd["m"].split(" ")[0].split(".")[1])
             if hdec[k] >= 2 and float(gd["m"].split(" ")[0]) >= 10: W(f"historical mass with 2 decimals is >= 10 g: 2 decimals are for spices/salt/drugs only, solids and fluids take 1 <- {ln.strip()}")
@@ -603,7 +550,6 @@ def check(text):
     for (v, x), names in taxa.items():
         if len(set(n.lower() for n in names)) > 1: W(f"one taxon (*{x}*) under several terms {sorted(set(names))}: one term per concept")
     if inf_unknown: W(f"{inf_unknown} line(s) '[Inferred: DATA UNKNOWN]': allowed only when no measure table (input or fetched source) covers the ingredient")
-    # modern list
     known = set()
     for (n, v), ps in parts_of.items():
         known.add((n, v)); known.update((p, v) for p in ps)
@@ -637,10 +583,9 @@ def check(text):
         if c > 1 and n in ("albumen", "yolk"): F(f"egg: one {n} row per variant")
     for (g, v), names in masses.items():
         if len(set(names)) > 1 and float(g) >= 1: W(f"different ingredients with the same mass {g} g: {sorted(set(names))} (copied value?)")
-    for k in unk_keys:  # DATA UNKNOWN is allowed only when no table unit fits the ingredient's phase
+    for k in unk_keys:
         us = vunits if mfluid.get(k) else wunits
         if us: F(f"'{k[0]}': [Inferred: DATA UNKNOWN] although a measure table is in use ({', '.join(sorted(us))}): retro-convert the modern mass (K-A cascade step 2)")
-    # coverage: every historical ingredient has a modern row
     have = set(mrows)
     for (n, v), egg_types in heads:
         ps = parts_of[(n, v)]
@@ -652,7 +597,6 @@ def check(text):
             need = [(n, v)]
         for nd in need:
             if nd not in have: F(f"no modern row for historical ingredient '{nd[0]}'" + (f" (variant: {v})" if v else ""))
-    # round masses (L1): the engine proves its own numbers through the State sig
     ok_sig = False
     if sig and py and py.group(1) == "true":
         calc = hashlib.sha1("\n".join(x.strip() for x in hs + ms).encode("utf-8")).hexdigest()[:8]
@@ -664,8 +608,6 @@ def check(text):
         if len(round_rows) >= max(2, -(-len(mrows) // 3)) and not just:
             F(f"{len(round_rows)} of {len(mrows)} modern masses end in .0/.5: the projection was skipped (L1)")
     return R
-
-
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     a = [x for x in sys.argv[1:] if not x.startswith("--")]

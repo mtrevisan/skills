@@ -1,10 +1,10 @@
-ENGINE (HCR 4.1 engine, Python, standard library only). Do not answer this message. Keep it: every code call starts with this source verbatim.
+ENGINE (HRC 4.1 engine, Python, standard library only). Do not answer this message. Keep it: every code call starts with this source verbatim.
 
 ```python
-"""HCR 4.1 engine: calculation routines and output linter, no tests. One file to load into the AI. Stdlib only.
-Run:  py hcr_engine.py payload.json   |   py hcr_engine.py < payload.json     (add --full for raw floats per ingredient)
-      py hcr_engine.py --check dossier.md   (output linter; a whole dossier or only the two ingredient lists; exit 1 on FAIL)
-Input/Output schema: see '../KNOWLEDGE.md' section E.  Tests: hcr_selftest.py (development only)."""
+"""HRC 4.1 engine: calculation routines and output linter, no tests. One file to load into the AI. Stdlib only.
+Run:  py hrc_engine.py payload.json   |   py hrc_engine.py < payload.json     (add --full for raw floats per ingredient)
+      py hrc_engine.py --check dossier.md   (output linter; a whole dossier or only the two ingredient lists; exit 1 on FAIL)
+Input/Output schema: see '../KNOWLEDGE.md' section E.  Tests: hrc_selftest.py (development only)."""
 import hashlib, json, math, re, sys
 from decimal import Decimal, ROUND_HALF_UP
 from fractions import Fraction
@@ -499,7 +499,7 @@ def check(text):
             if at < 0: F(f"missing header: {h}")
             elif at < pos: F(f"header out of order: {h}")
             else: pos = at
-        if not py: F("State block missing (the last block must hold the hcr_state JSON)")
+        if not py: F("State block missing (the last block must hold the hrc_state JSON)")
         elif py.group(1) == "true" and not sig: F("State has python:true but no sig")
         if "<details>" in text and text.rstrip().rfind("</details>") < text.rfind("<details>"): F("State block not closed")
     heads, parts_of, hkeys, taxa = [], {}, set(), {}

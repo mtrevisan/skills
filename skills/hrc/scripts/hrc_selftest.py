@@ -1,7 +1,7 @@
-"""HCR 4.1 tests. Run:  py hcr_selftest.py   -> SELFTEST OK"""
+"""HRC 4.1 tests. Run:  py hrc_selftest.py   -> SELFTEST OK"""
 import copy, json, re, sys
 from fractions import Fraction
-from hcr_engine import check, egg_model, frac, fstr, retro, run, track
+from hrc_engine import check, egg_model, frac, fstr, retro, run, track
 
 SAMPLE = {"year": 1390, "zone": 0, "evap_min": 5.0,
           "inferred_targets": [
@@ -57,7 +57,7 @@ def main():
     assert blend(1)["errors"]                                                                 # one row for two parts = refused
     def dossier(r):
         return ("## Historical List of Ingredients\n" + "\n".join(r["hist_lines"]) + "\n## Modern List of Ingredients\n" + "\n".join(r["modern_lines"]) +
-                "\n<details><summary>State</summary>\n" + json.dumps({"hcr_state": r["state"]}) + "\n</details>\n")
+                "\n<details><summary>State</summary>\n" + json.dumps({"hrc_state": r["state"]}) + "\n</details>\n")
     assert not [x for x in check(dossier(o)) if x[0] == "FAIL"], check(dossier(o))           # the engine passes its own linter
     assert any("sig" in x[1] for x in check(dossier(o).replace(o["state"]["sig"], "00000000")))  # edited lines / no engine run are caught
     # variants, count nouns, unknown rows

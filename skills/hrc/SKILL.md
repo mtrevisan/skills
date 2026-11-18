@@ -1,11 +1,11 @@
 ---
-name: hcr
-description: Convert ONE historical recipe (any language, any period) into a modern technical dossier: historical and modern ingredient lists with computed masses, rheology gate, HACCP, STE100 procedure. Use when the user gives an old recipe or says "analizza la ricetta", "HCR", "historical cooking recipe", or wants measures of a historical recipe converted to grams.
+name: hrc
+description: Convert ONE historical recipe (any language, any period) into a modern technical dossier: historical and modern ingredient lists with computed masses, rheology gate, HACCP, STE100 procedure. Use when the user gives an old recipe or says "analizza la ricetta", "HRC", "historical cooking recipe", or wants measures of a historical recipe converted to grams.
 ---
 
-# HCR 4.1 — Historical Cooking Recipe converter
+# HRC 4.1 — Historical Recipe Converter
 Convert ONE historical recipe (any dish) into ONE modern technical dossier.
-Files (in this skill's folder): `K` = [KNOWLEDGE.md](KNOWLEDGE.md), `F` = [FALLBACK.md](FALLBACK.md) (read only without a code tool), `E` = `scripts/hcr_engine.py`. Read K before starting. If K is unreadable: output only `LINT_ERROR: KNOWLEDGE_MISSING`.
+Files (in this skill's folder): `K` = [KNOWLEDGE.md](KNOWLEDGE.md), `F` = [FALLBACK.md](FALLBACK.md) (read only without a code tool), `E` = `scripts/hrc_engine.py`. Read K before starting. If K is unreadable: output only `LINT_ERROR: KNOWLEDGE_MISSING`.
 
 ## 1. PIPELINE (internal — print nothing until the final dossier)
 P1 Parse (K-A, K-B) → P2 Compute (run E with a JSON payload, K-E; no code tool → F, python=false) → P3 Rheology gate (K-C) → P4 Render (§3) → write in STE100 (K-G) → P5 Check (§4).
@@ -27,7 +27,7 @@ Abort with ONE line `LINT_ERROR: <reason>` only for: metrology routing, invented
 12. Engine proof. With E, State carries E `sig`; never invent one. Without E, State has `python:false` and every number follows F step by step.
 13. Variants. The base version is the first complete version in the text. Each "or"-variant is a full second set of rows (every ingredient it uses, its own `sub_matrix`) tagged `variant:"<label from the text>"`; E prints ` (variant: …)` and one mass balance per variant. A variant ingredient never takes 0 g, never lacks a row in either list, never copies the mass of another row.
 14. Unknown. Every ingredient has a modern mass (rule 4): never a `DATA UNKNOWN` modern row (E refuses `unknown`). An unidentified ingredient is weighed as `ident UNKNOWN`, `cat:"other"`. Only the historical line may be `[Inferred: DATA UNKNOWN] name`, and only when no table unit fits. Never write `/ UNVERIFIABLE`, a 0 g row, or a comment inside an ingredient line (comments go to Notes).
-15. Self-check. With a code tool: write the dossier to a file, run `py ${CLAUDE_SKILL_DIR}/scripts/hcr_engine.py --check <file>`, fix every FAIL, then send. Without a code tool: apply §4 line by line.
+15. Self-check. With a code tool: write the dossier to a file, run `py ${CLAUDE_SKILL_DIR}/scripts/hrc_engine.py --check <file>`, fix every FAIL, then send. Without a code tool: apply §4 line by line.
 
 ## 3. OUTPUT TEMPLATE (headers and order locked; omit a line that does not apply; `—` for an empty section; `⟦x⟧` = paste E field x)
 ```
@@ -76,7 +76,7 @@ Abort with ONE line `LINT_ERROR: <reason>` only for: metrology routing, invented
 
 <details><summary>State</summary>
 
-⟦state⟧ as {"hcr_state":{…}}
+⟦state⟧ as {"hrc_state":{…}}
 </details>
 ```
 Palatability, Substitutions, Batch Comparative: only data-grounded lines, else `—`. If a manual check (L3, L9–L12, L14, L15) fails, fix the dossier before output.
