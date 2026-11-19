@@ -7,7 +7,7 @@ import tokenize
 
 here = pathlib.Path(__file__).parent
 skill = here / "skills" / "hrc"
-plat = here / "platforms"
+plat = here / "skills" / "hrc" / "platforms"
 
 FILES_LINE = next(l for l in (skill / "SKILL.md").read_text(encoding="utf-8").splitlines() if l.startswith("Files (in this skill"))
 RULE15 = next(l for l in (skill / "SKILL.md").read_text(encoding="utf-8").splitlines() if l.startswith("15. Self-check."))

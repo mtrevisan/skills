@@ -367,9 +367,9 @@ Native SKILL.md support.
 
 Upload:
 
-- `platforms/gemini/INSTRUCTIONS.md`
-- `platforms/gemini/KNOWLEDGE.md`
-- `platforms/gemini/FALLBACK.md`
+- `skills/hrc/platforms`
+- `skills/hrc/platforms`
+- `skills/hrc/platforms`
 
 #### Gemini CLI
 
@@ -429,14 +429,13 @@ skills/
     ├── SKILL.md
     ├── KNOWLEDGE.md
     ├── FALLBACK.md
+    ├── platforms/
+    │   ├── gemini/
+    │   ├── aistudio/
+    │   └── deepseek/
     └── scripts/
         ├── hrc_engine.py
         └── hrc_selftest.py
-
-platforms/
-├── gemini/
-├── aistudio/
-└── deepseek/
 
 build_platforms.py
 ```
