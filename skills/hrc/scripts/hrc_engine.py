@@ -197,6 +197,9 @@ def run(p, full=False):
                           "cat": "other", "track": "GROSSO", "perishable": True, "w": float(r["seed"]), "egg_of": r["name"], "hist_ref": r.get("hist_ref"), "taxon": r.get("taxon"),
                           "just": r.get("just", ""), "_i": n_, "variant": r.get("variant")})
             continue
+        if r.get("phase") == "fluid":  # every fluid prints g AND ml: density default 1.025, 1.0 only for pure water
+            if not r.get("rho"): r["rho"] = DENS["fluid"]; notes.append(f"rho default {DENS['fluid']} for {r['name']}")
+            elif r["rho"] == 1: notes.append(f"rho 1.0 for {r['name']}: valid only for pure water")
         r["w"] = float(r["seed"]); items.append(r)
     for i in items:
         if i.get("inferred"): pen.append("inferred ingredient " + i["name"])
@@ -554,7 +557,7 @@ def check(text):
     # historical list
     heads, parts_of, hkeys, taxa = [], {}, set(), {}
     cur, inf_unknown, unk_keys, wunits, vunits = None, 0, [], set(), set()
-    hdec = {}
+    hdec, hfl, ug_of = {}, set(), {}
     for ln in hs:
         pm = H_PART.match(ln)
         if pm:
@@ -590,6 +593,9 @@ def check(text):
             (vunits if " ml" in gd["m"] else wunits).add(gd["u"])  # table units in use (count nouns and eggs excluded)
         if gd.get("m"):
             hdec[k] = len(gd["m"].split(" ")[0].split(".")[1])
+            if " ml" in gd["m"]: hfl.add(k)
+            if "albumen" not in gd["m"] and "yolk" not in gd["m"] and gd["u"].lower() != name.lower() and "q" in gd and frac(gd["q"]):
+                ug_of.setdefault(gd["u"].lower(), []).append((float(gd["m"].split(" ")[0]) / float(frac(gd["q"])), name))
             if hdec[k] >= 2 and float(gd["m"].split(" ")[0]) >= 10: W(f"historical mass with 2 decimals is >= 10 g: 2 decimals are for spices/salt/drugs only, solids and fluids take 1 <- {ln.strip()}")
         if k in hkeys: F(f"historical line repeated (same name and variant): {name}")
         hkeys.add(k)
@@ -602,6 +608,13 @@ def check(text):
         if x: taxa.setdefault((v, x.lower()), []).append(name)
     for (v, x), names in taxa.items():
         if len(set(n.lower() for n in names)) > 1: W(f"one taxon (*{x}*) under several terms {sorted(set(names))}: one term per concept")
+    for u_, vs_ in ug_of.items():
+        vals = [x[0] for x in vs_]
+        if len(vs_) > 1 and max(vals) > min(vals) * 1.03: F(f"unit '{u_}' has different g per unit ({', '.join(f'{x[1]} {x[0]:.2f}' for x in vs_)}): one value per unit (same table), or name the table (sottile/grossa) in the unit")
+    if heads and inf_unknown == len(heads) and "no measure table" not in notes: F("every historical line is DATA UNKNOWN: apply the missing-quantity cascade (retro-convert from the modern masses); only if no measure table exists anywhere, say 'no measure table' in Notes")
+    for (n_, v_), ps_ in parts_of.items():
+        if ps_ and hdec.get((n_, v_)) == 1: F(f"blend '{n_}' is a spice: historical mass needs 2 decimals")
+        if not ps_ and hdec.get((n_, v_)) == 2: W(f"'{n_}' has no parts: if it is a blend (generic spice term), search its composition and expand it; Notes must record the source or 'not found'")
     if inf_unknown: W(f"{inf_unknown} line(s) '[Inferred: DATA UNKNOWN]': allowed only when no measure table (input or fetched source) covers the ingredient")
     # modern list
     known = set()
@@ -609,7 +622,7 @@ def check(text):
         known.add((n, v)); known.update((p, v) for p in ps)
     comps = {p for ps in parts_of.values() for p in ps}
     known_names = {n for n, _ in known} | {"albumen", "yolk"}
-    mrows, seen, masses, round_rows, mfluid = [], {}, {}, [], {}
+    mrows, seen, masses, round_rows, mfluid, mdec = [], {}, {}, [], {}, {}
     for ln in ms:
         um = M_UNK.match(ln)
         if um: F(f"modern line DATA UNKNOWN: every ingredient has a modern mass from physics (seed) <- {ln.strip()}"); n, x, v = _tail(um.group("t")); mrows.append((n.lower(), v)); continue
@@ -626,8 +639,13 @@ def check(text):
             F(f"modern name not in the historical list (names stay in the source language, preparation words go to the Procedure) <- {ln.strip()}"); name = cands[0]
         want = 1 if " ml " in ln else 2 if (name in comps or hdec.get((name, v), 1) >= 2) and name not in ("albumen", "yolk") else 1
         mfluid[(name, v)] = " ml " in ln
+        mdec[(name, v)] = len(g.split(".")[1])
+        if " ml " in ln:
+            gv, mv = val, float(re.search(rf"= ({_N}) ml", ln).group(1))
+            if abs(gv - mv) < .051: W(f"fluid with density 1.000 (g = ml): valid only for pure water <- {ln.strip()}")
         if len(g.split(".")[1]) != want and not ((name, v) not in hdec and name not in comps and " ml " not in ln and len(g.split(".")[1]) in (1, 2)): F(f"modern mass needs {want} decimal(s) (solids and fluids 1; spices, salt 2) <- {ln.strip()}")
         if val <= 0: F(f"modern mass must be > 0 (a floor applies) <- {ln.strip()}")
+        if v == "base": F(f"the base version has no variant tag <- {ln.strip()}")
         if v is not None and not any(hv == v for _, hv in hkeys): F(f"variant '{v}' has no historical line <- {ln.strip()}")
         mrows.append((name, v)); seen[(name, v)] = seen.get((name, v), 0) + 1
         if abs(val - round(val)) < 1e-9 or abs(val % 1 - .5) < 1e-9: round_rows.append(ln.strip())
@@ -640,6 +658,9 @@ def check(text):
     for k in unk_keys:  # DATA UNKNOWN is allowed only when no table unit fits the ingredient's phase
         us = vunits if mfluid.get(k) else wunits
         if us: F(f"'{k[0]}': [Inferred: DATA UNKNOWN] although a measure table is in use ({', '.join(sorted(us))}): retro-convert the modern mass (K-A cascade step 2)")
+    for k_, d_ in mdec.items():  # fluid shown with g and ml in one list, not in the other
+        if k_ in hdec and (k_ in hfl) != mfluid.get(k_, False): F(f"'{k_[0]}': g and ml must appear in BOTH lists for a fluid (historical {'has' if k_ in hfl else 'lacks'} ml, modern {'has' if mfluid.get(k_) else 'lacks'} ml)")
+        if d_ == 2 and hdec.get(k_) == 1 and k_[0] not in ("albumen", "yolk"): F(f"'{k_[0]}': modern mass has 2 decimals (spice/salt), historical mass needs 2 too")
     # coverage: every historical ingredient has a modern row
     have = set(mrows)
     for (n, v), egg_types in heads:
