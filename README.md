@@ -367,9 +367,9 @@ Native SKILL.md support.
 
 Upload:
 
-- `skills/hrc/platforms`
-- `skills/hrc/platforms`
-- `skills/hrc/platforms`
+- `skills/hrc/platforms/gemini/INSTRUCTIONS.md`
+- `skills/hrc/platforms/gemini/KNOWLEDGE.md`
+- `skills/hrc/platforms/gemini/FALLBACK.md`
 
 #### Gemini CLI
 
@@ -397,7 +397,7 @@ Then:
 Use:
 
 ```text
-platforms/deepseek/BUNDLE_NOEXEC.md
+skills/hrc/platforms/deepseek/BUNDLE_NOEXEC.md
 ```
 
 #### API or Agent Harness
@@ -405,13 +405,13 @@ platforms/deepseek/BUNDLE_NOEXEC.md
 Use:
 
 ```text
-platforms/deepseek/BUNDLE_EXEC.md
+skills/hrc/platforms/deepseek/BUNDLE_EXEC.md
 ```
 
 and place:
 
 ```text
-platforms/deepseek/hrc_engine.py
+skills/hrc/platforms/deepseek/hrc_engine.py
 ```
 
 in the working directory.
