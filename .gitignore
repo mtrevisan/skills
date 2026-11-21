@@ -1,3 +1,5 @@
 .claude
 .idea
 skills/hrc/scripts/__pycache__/
+
+*.zip

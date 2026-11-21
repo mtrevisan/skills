@@ -246,15 +246,17 @@ The final dossier may include:
 
 ## Requirements
 
-- Python 3.
-- Python standard library only.
-- No third-party dependencies.
-
-The deterministic engine runs entirely on the Python standard library.
+- **Core Engine (`hrc_engine.py`):** Python 3.10+ (standard library only, zero third-party dependencies).
+- **MCP / REST Server (`server.py`):** Optional dependencies listed in `requirements.txt` (`fastapi`, `uvicorn`, `mcp`, `pydantic`, `python-dotenv`).
+- **No-Code / Web Interfaces:** Works without Python via `FALLBACK.md` (manual mode, confidence capped at `MEDIUM`).
 
 ---
 
 ## Installation
+
+### Agensi Marketplace
+
+Install directly from [Agensi](https://agensi.ai) into any compatible agent (Claude Code, Cursor, Codex CLI, Gemini CLI, Windsurf, and more), or download the skill bundle and use the platform adapter for your preferred AI environment.
 
 ### Claude Code Marketplace
 
@@ -307,7 +309,7 @@ Invoke:
 /hrc
 ```
 
-or ask the model to analyse a historical recipe.
+or ask the model to analyse a historical recipe (e.g., `"HRC: analyze this 14th-century recipe..."`).
 
 Recommended input:
 
@@ -344,22 +346,43 @@ Confidence reflects evidential strength, not historical certainty.
 
 ## Fallback Mode
 
-When Python execution is unavailable, HRC can operate in manual mode.
+When Python execution is unavailable, HRC can operate in manual mode (`FALLBACK.md`).
 
 In fallback mode:
 
 - Deterministic computation is disabled.
 - Quantitative reconstruction follows documented manual procedures.
-- Confidence is capped at MEDIUM.
-- The dossier explicitly reports the fallback status.
+- `python` is set to `false` in the State block.
+- Confidence is capped at `MEDIUM`.
+- The dossier explicitly reports the fallback status (`Manual Fallback`).
 
 ---
 
 ## Supported Platforms
 
-### Claude Code
+### Claude Code / Codex CLI / Open `SKILL.md` Agents
 
-Native SKILL.md support.
+Native `SKILL.md` support. Agents execute `scripts/hrc_engine.py` directly via shell.
+
+### MCP Server (Claude Desktop, Cursor, Cline, Windsurf)
+
+Run HRC as a local or remote Model Context Protocol server without granting shell access:
+
+1. Install server dependencies:
+   ```bash
+pip install -r skills/hrc/requirements.txt
+   ```
+2. Add the server configuration from skills/hrc/configs/claude_desktop.json or `skills/hrc/configs/cursor_mcp.json` to your client settings (updating `/absolute/path/bundle/` to your local path).
+3. Load `skills/hrc/SYSTEM_PROMPT_TOOLS.md` as your project/system prompt.
+The MCP server exposes get_knowledge, get_fallback, run_engine, and check_dossier as native tools.
+
+Custom API / Tool-Calling Harnesses (ChatGPT, OpenAI API, Agensi Web)
+
+For tool-calling agents connecting over HTTP:
+1. Start the server in HTTP mode (HRC_MODE=http, HRC_TOKEN=<your-secret>):
+   bash HRC_MODE=http HRC_TOKEN=your-secret python skills/hrc/scripts/server.py    
+2. Register the tool definitions from skills/hrc/configs/openai_tools.json.
+3. Use skills/hrc/SYSTEM_PROMPT_TOOLS.md as the system prompt.
 
 ### Gemini
 
@@ -386,8 +409,8 @@ Enable:
 
 Then:
 
-1. Paste `SYSTEM_INSTRUCTIONS.md`.
-2. Paste `ENGINE_MESSAGE.md`.
+1. Paste skills/hrc/platforms/aistudio/SYSTEM_INSTRUCTIONS.md.
+2. Paste skills/hrc/platforms/aistudio/ENGINE_MESSAGE.md.
 3. Submit the recipe.
 
 ### DeepSeek
@@ -429,14 +452,21 @@ skills/
     ├── SKILL.md
     ├── KNOWLEDGE.md
     ├── FALLBACK.md
+    ├── SYSTEM_PROMPT_TOOLS.md
+    ├── requirements.txt
+    ├── .env.example
+    ├── configs/
+    │   ├── claude_desktop.json
+    │   ├── cursor_mcp.json
+    │   └── openai_tools.json
     ├── platforms/
     │   ├── gemini/
     │   ├── aistudio/
     │   └── deepseek/
     └── scripts/
         ├── hrc_engine.py
-        └── hrc_selftest.py
-
+        ├── hrc_selftest.py
+        └── server.py
 build_platforms.py
 ```
 

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "hrc-4.1": {
+      "command": "python",
+      "args": ["/absolute/path/bundle/scripts/server.py"],
+      "env": { "HRC_MODE": "stdio" }
+    }
+  }
+}
