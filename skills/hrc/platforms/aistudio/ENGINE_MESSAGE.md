@@ -2,8 +2,8 @@ ENGINE (HRC 4.1 engine, Python, standard library only). Do not answer this messa
 
 ```python
 """HRC 4.1 engine: calculation routines and output linter, no tests. One file to load into the AI. Stdlib only.
-Run:  py hrc_engine.py payload.json   |   py hrc_engine.py < payload.json     (add --full for raw floats per ingredient)
-      py hrc_engine.py --check dossier.md   (output linter; a whole dossier or only the two ingredient lists; exit 1 on FAIL)
+Run:  python hrc_engine.py payload.json   |   python hrc_engine.py < payload.json     (add --full for raw floats per ingredient)
+      python hrc_engine.py --check dossier.md   (output linter; a whole dossier or only the two ingredient lists; exit 1 on FAIL)
 Input/Output schema: see '../KNOWLEDGE.md' section E.  Tests: hrc_selftest.py (development only)."""
 import hashlib, json, math, re, sys
 from decimal import Decimal, ROUND_HALF_UP

@@ -3,3 +3,4 @@
 skills/hrc/scripts/__pycache__/
 
 *.zip
+dist/

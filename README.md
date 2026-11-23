@@ -256,7 +256,15 @@ The final dossier may include:
 
 ### Agensi Marketplace
 
-Install directly from [Agensi](https://agensi.ai) into any compatible agent (Claude Code, Cursor, Codex CLI, Gemini CLI, Windsurf, and more), or download the skill bundle and use the platform adapter for your preferred AI environment.
+Agensi serves skills to the agent over MCP (no local install): the agent receives `SKILL.md` and fetches `KNOWLEDGE.md`, `FALLBACK.md` and `scripts/hrc_engine.py` on demand, and runs the engine unchanged from a temporary file.
+
+To publish, build the upload ZIP (only the four files the skill needs; servers, Docker and platform bundles are left out):
+
+```bash
+python build_platforms.py   # writes dist/hrc-agensi.zip
+```
+
+Chat-only environments without code execution or web access (ChatGPT, DeepSeek, Gemini web) run HRC in manual fallback mode, or use the bundles in `skills/hrc/platforms/`.
 
 ### Claude Code Marketplace
 
@@ -384,6 +392,14 @@ For tool-calling agents connecting over HTTP:
 2. Register the tool definitions from skills/hrc/configs/openai_tools.json.
 3. Use skills/hrc/SYSTEM_PROMPT_TOOLS.md as the system prompt.
 
+### ChatGPT (Custom GPT)
+
+Create a GPT and:
+
+1. Paste `skills/hrc/platforms/chatgpt/INSTRUCTIONS.md` into *Instructions* (under the 8000-character limit).
+2. Upload as *Knowledge*: `RULES.md`, `KNOWLEDGE.md`, `FALLBACK.md`.
+3. Optional, for deterministic computation: enable *Code Interpreter* and also upload `hrc_engine.py`. Without it the GPT runs in manual fallback mode (`python:false`, confidence capped at `MEDIUM`).
+
 ### Gemini
 
 #### Gemini Gem
@@ -462,6 +478,7 @@ skills/
     ├── platforms/
     │   ├── gemini/
     │   ├── aistudio/
+    │   ├── chatgpt/
     │   └── deepseek/
     └── scripts/
         ├── hrc_engine.py

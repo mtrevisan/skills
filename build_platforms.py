@@ -1,5 +1,5 @@
-"""Builds platforms/gemini, platforms/aistudio and platforms/deepseek from the skill in skills/hrc.
-The skill is the single source of truth: edit it, never the generated files, then run:  py build_platforms.py
+"""Builds platforms/gemini, platforms/aistudio, platforms/deepseek and platforms/chatgpt from the skill in skills/hrc.
+The skill is the single source of truth: edit it, never the generated files, then run:  python build_platforms.py
 README.md is hand-written and never overwritten."""
 import io
 import pathlib
@@ -26,8 +26,8 @@ def wr(p, s):
 body = rd(skill / "SKILL.md").split("\n---\n", 1)[1].strip("\n")      # drop the frontmatter
 body = body.split("\n", 1)[1].strip("\n")                               # drop the H1
 assert FILES_LINE in body and RULE15 in body
-knowledge = rd(skill / "KNOWLEDGE.md").replace("py <skill dir>/scripts/hrc_engine.py", "py hrc_engine.py")
-fallback = rd(skill / "FALLBACK.md").replace("py <skill dir>/scripts/hrc_engine.py", "py hrc_engine.py")
+knowledge = rd(skill / "KNOWLEDGE.md").replace("python <skill dir>/scripts/hrc_engine.py", "python hrc_engine.py")
+fallback = rd(skill / "FALLBACK.md").replace("python <skill dir>/scripts/hrc_engine.py", "python hrc_engine.py")
 engine_src = (skill / "scripts" / "hrc_engine.py").read_text(encoding="utf-8")
 toks = [t for t in tokenize.generate_tokens(io.StringIO(engine_src).readline) if t.type != tokenize.COMMENT]
 engine_min = "\n".join(x.rstrip() for x in tokenize.untokenize(toks).split("\n") if x.strip()) + "\n"
@@ -63,6 +63,47 @@ wr(d / "BUNDLE_NOEXEC.md", prompt(
     NOCODE15) + "\n\n---\n\n" + knowledge + "\n\n---\n\n" + fallback)
 wr(d / "BUNDLE_EXEC.md", prompt(
     "Files: `K` = the KNOWLEDGE section below this prompt, `F` = the FALLBACK section (read only without a code tool), `E` = `hrc_engine.py` in the working directory." + KILL,
-    RULE15.replace("${CLAUDE_SKILL_DIR}/scripts/", "")) + "\n\n---\n\n" + knowledge + "\n\n---\n\n" + fallback)
+    RULE15.replace("python3 scripts/hrc_engine.py", "python3 hrc_engine.py")) + "\n\n---\n\n" + knowledge + "\n\n---\n\n" + fallback)
 wr(d / "hrc_engine.py", engine_min)
-print("platform packages rebuilt")
+
+
+# ---- ChatGPT (Custom GPT: Instructions <= 8000 chars; Knowledge files; Code Interpreter optional) -------------------
+c = plat / "chatgpt"
+_rest = body.split("\n## 2. HARD RULES", 1)
+sec1 = _rest[0].strip("\n")
+_s24 = "## 2. HARD RULES" + _rest[1]
+rules = _s24.split("\n## 3. OUTPUT TEMPLATE", 1)[0].strip("\n")
+_s34 = "## 3. OUTPUT TEMPLATE" + _s24.split("\n## 3. OUTPUT TEMPLATE", 1)[1]
+template, final = _s34.split("\n## 4. FINAL CHECK", 1)
+final = "## 4. FINAL CHECK" + final
+CG_FILES = ("Files (Knowledge, search them before EVERY answer): `K` = KNOWLEDGE.md, `F` = FALLBACK.md, `R` = RULES.md "
+            "(the full HARD RULES 1-15 and the OUTPUT TEMPLATE: apply them exactly). `E` = `hrc_engine.py` in /mnt/data, usable only if "
+            "Code Interpreter is on; otherwise always the no-code case (F, `python:false`)." + KILL)
+CG_RULE15 = ("15. Self-check. With Code Interpreter: write the dossier to a file, run `python /mnt/data/hrc_engine.py --check <file>`, "
+             "fix every FAIL, then send. Without it: apply §4 line by line.")
+instr = ("# HRC 4.1 — SYSTEM PROMPT\n" + sec1.replace(FILES_LINE, CG_FILES) + "\n\n"
+         "## 2. HARD RULES (full text in R: read it first; the key ones)\n"
+         "- No invention: missing data -> `DATA UNKNOWN`; no fake citations, quotes, measures. Concordance with nothing verifiable -> `NONE VERIFIED`.\n"
+         "- Numbers come from E (or F), never by hand when E exists. Paste E `hist_lines`, `modern_lines`, `render` lines verbatim (the State `sig` hashes them).\n"
+         "- Every ingredient named anywhere has one row in BOTH lists; native unit + mass on every historical line; decimals: spices, salt, drugs 2, all others 1; fluids `X.X g = Y.Y ml`.\n"
+         "- Eggs: one albumen row and one yolk row. Spice blends: search the composition first, then expand.\n"
+         "- Confidence = E `confidence`, never raised. Write in the user's language (default English).\n"
+         "- Same input, same output: ingredients in input order, no optional additions.\n"
+         + CG_RULE15 + "\n\n"
+         "## 3. OUTPUT\nFollow the OUTPUT TEMPLATE in R exactly (16 headers, State block last, no prose outside it).\n")
+assert len(instr) <= 8000, "ChatGPT instructions too long: %d" % len(instr)
+wr(c / "INSTRUCTIONS.md", instr)
+wr(c / "RULES.md", "# HRC 4.1 — RULES (R)\n\n" + rules.replace(RULE15, CG_RULE15) + "\n\n" + template + "\n" + final)
+wr(c / "KNOWLEDGE.md", knowledge)
+wr(c / "FALLBACK.md", fallback)
+wr(c / "hrc_engine.py", engine_min)
+
+# ---- Agensi (upload ZIP: only what the skill needs; servers, Docker, configs and platform bundles stay out) -----------
+import zipfile
+dist = here / "dist"
+dist.mkdir(exist_ok=True)
+AGENSI = ["SKILL.md", "KNOWLEDGE.md", "FALLBACK.md", "scripts/hrc_engine.py"]
+with zipfile.ZipFile(dist / "hrc-agensi.zip", "w", zipfile.ZIP_DEFLATED) as z:
+    for rel in AGENSI:
+        z.writestr("hrc/" + rel, rd(skill / rel) + chr(10))
+print("platform packages rebuilt; Agensi ZIP: dist/hrc-agensi.zip")

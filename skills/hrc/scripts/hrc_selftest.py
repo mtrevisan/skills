@@ -1,4 +1,4 @@
-"""HRC 4.1 tests. Run:  py hrc_selftest.py   -> SELFTEST OK"""
+"""HRC 4.1 tests. Run:  python hrc_selftest.py   -> SELFTEST OK"""
 import copy, json, re, sys
 from fractions import Fraction
 from hrc_engine import check, egg_model, frac, fstr, retro, run, track
