@@ -102,7 +102,11 @@ wr(c / "hrc_engine.py", engine_min)
 import zipfile
 dist = here / "dist"
 dist.mkdir(exist_ok=True)
-AGENSI = ["SKILL.md", "KNOWLEDGE.md", "FALLBACK.md", "scripts/hrc_engine.py"]
+AGENSI = ["SKILL.md", "INSTALL.md", "KNOWLEDGE.md", "FALLBACK.md", "scripts/hrc_engine.py",
+          "platforms/chatgpt/INSTRUCTIONS.md", "platforms/chatgpt/RULES.md", "platforms/chatgpt/KNOWLEDGE.md",
+          "platforms/chatgpt/FALLBACK.md", "platforms/chatgpt/hrc_engine.py",
+          "platforms/gemini/INSTRUCTIONS.md", "platforms/gemini/KNOWLEDGE.md", "platforms/gemini/FALLBACK.md",
+          "platforms/deepseek/BUNDLE_NOEXEC.md", "platforms/deepseek/BUNDLE_EXEC.md", "platforms/deepseek/hrc_engine.py"]
 with zipfile.ZipFile(dist / "hrc-agensi.zip", "w", zipfile.ZIP_DEFLATED) as z:
     for rel in AGENSI:
         z.writestr("hrc/" + rel, rd(skill / rel) + chr(10))
